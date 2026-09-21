@@ -1,0 +1,23 @@
+Airwindows kWoodRoom reverb DSP
+By Chris Johnson / Airwindows
+Copyright (c) 2018 Chris Johnson
+
+Thank you to Chris Johnson and Airwindows for making kWoodRoom's reverb DSP
+available as open source under the MIT license.
+
+Upstream repository: https://github.com/airwindows/airwindows
+Source directory: plugins/WinVST/kWoodRoom
+Pinned revision: 8efe4521a56bc68f34be0017b1916e1895572849
+
+Tide Room retains the upstream kWoodRoom DSP source in
+native/third_party/airwindows/kwoodroom. The WoodRoom engine wraps it as a
+shared, fully wet reverb with smoothed controls, output filtering and guards.
+Source propagation and moving early reflections are implemented separately.
+
+The current default build uses Tide Room's independent ClearRoom engine.
+The Airwindows-based WoodRoom engine remains available in the source with
+TIDE_NATIVE_WOOD=ON and TIDE_CLEAR_ROOM=OFF.
+
+See Airwindows-MIT-LICENSE.txt in this directory for the complete license.
+The upstream copyright and permission notice are preserved. Tide Room's
+project license does not replace the MIT license on Airwindows code.

@@ -2,7 +2,8 @@ Tide Room third-party notices
 
 These notices accompany components in Tide Room and its JUCE framework.
 CHOW Tape magnetic-model adaptation: GPL-3.0-only; see CHOW-Tape-NOTICE.md.
-Airwindows kWoodRoom: MIT; see Airwindows-MIT-LICENSE.txt.
+Airwindows kWoodRoom reverb DSP by Chris Johnson: MIT; see
+Airwindows-kWoodRoom-NOTICE.txt and Airwindows-MIT-LICENSE.txt.
 MIT KEMAR measurements: see MIT-KEMAR-NOTICE.txt.
 JUCE: AGPLv3 or the JUCE commercial licence; see JUCE-LICENSE.md.
 Other files reproduce bundled dependency notices.

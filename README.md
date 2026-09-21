@@ -52,4 +52,6 @@ Drag a tower left/right and nearer/farther across the floor plane. Each pitch oc
 
 ## License and credits
 
+**Reverb DSP:** Thanks to **Chris Johnson / [Airwindows](https://github.com/airwindows/airwindows)** for **kWoodRoom**, the reverb DSP used by Tide Room's retained WoodRoom engine. The upstream source, MIT license and copyright notice are included. See the [reverb attribution](native/Assets/ThirdPartyNotices/Airwindows-kWoodRoom-NOTICE.txt).
+
 Original Tide Room code is copyright © 2026 Eric Ruud and licensed under **AGPL-3.0-only**, except where a file states other terms. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the full terms and component-specific licenses. JUCE, the CHOW Tape adaptation, Airwindows DSP and MIT KEMAR measurements retain their respective notices.
