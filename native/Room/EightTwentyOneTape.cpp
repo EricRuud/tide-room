@@ -1,4 +1,5 @@
 #include "EightTwentyOneTape.h"
+#include "RuntimePaths.h"
 #include "../Lab/LF2/P821NativeConfiguration.h"
 #include "../Lab/LF2/P821NativeQualityModel.h"
 #include "../Lab/LF2/P821StreamAdapter.h"
@@ -39,7 +40,7 @@ void EightTwentyOneTape::prepare(double sampleRate,int block,const juce::File& r
     drive.reset(sampleRate,.03);trim.reset(sampleRate,.03);motion.prepare(sampleRate);readout.prepare();
     drive.setCurrentAndTargetValue(settings.drive);trim.setCurrentAndTargetValue(settings.trim);
     if(std::abs(sampleRate-48000.)>.1){messages.fill("821 requires 48 kHz. Change the audio sample rate to enable it.");return;}
-    const auto folder=resources==juce::File{}?juce::File::getSpecialLocation(juce::File::currentApplicationFile).getChildFile("Contents/Resources/821"):resources;
+    const auto folder=resources==juce::File{}?runtimeResources().getChildFile("821"):resources;
     for(int i=0;i<2;++i){try{auto next=std::make_unique<Impl>();if(!next->load(folder,i)){messages[(size_t)i]="821 calibration data is missing. Rebuild the app resources.";continue;}models[(size_t)i]=std::move(next);available[(size_t)i]=true;messages[(size_t)i]=i?"821 / measured model / 900 at 30 ips":"821 / LF2 research model / 456 at 15 ips";}
         catch(const std::exception& e){messages[(size_t)i]="821 unavailable: "+juce::String(e.what());}}
     reset(settings.quality);

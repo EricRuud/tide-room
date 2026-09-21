@@ -21,6 +21,9 @@ public:
     juce::Image& begin(const ListenerSpace& view) {
         // Cap fullscreen post-processing cost, including Retina/4K displays.
         scale=std::min(2.f,std::sqrt(maxPixels/std::max(1.f,view.bounds.getWidth()*view.bounds.getHeight())));
+#if TIDE_CPU_PREVIEW
+        scale=std::min(.75f,std::sqrt(400000.f/std::max(1.f,view.bounds.getWidth()*view.bounds.getHeight())));
+#endif
         const int w=std::max(2,juce::roundToInt(view.bounds.getWidth()*scale)),h=std::max(2,juce::roundToInt(view.bounds.getHeight()*scale));
         if(scene.getWidth()!=w||scene.getHeight()!=h){scene=juce::Image(juce::Image::ARGB,w,h,true);refracted=scene.createCopy();finished=scene.createCopy();mapsReady=false;const int sw=std::max(2,juce::roundToInt(view.bounds.getWidth()/3)),sh=std::max(2,juce::roundToInt(view.bounds.getHeight()/3));soft=juce::Image(juce::Image::ARGB,sw,sh,true);scratch=soft.createCopy();}
         if(!mapsReady||view.fromListener!=cached.fromListener||view.bounds!=cached.bounds||view.centre!=cached.centre||std::abs(view.width-cached.width)>.0001f||std::abs(view.depth-cached.depth)>.0001f||std::abs(view.height-cached.height)>.0001f){cached=view;buildMap();}

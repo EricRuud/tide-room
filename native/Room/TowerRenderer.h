@@ -29,6 +29,9 @@ public:
         auto& f=frames[(size_t)identity];advance(f,scene,identity,seconds);
         auto p=parameters(scene,identity,position,view,(float)f.time,f.flow);
         p.settings.x=(float)std::clamp(((int)std::ceil(radius*tide::tower::imageSpan*2)+31)/32*32,384,1024);
+#if TIDE_CPU_PREVIEW
+        p.settings.x=(float)std::clamp(((int)std::ceil(radius*tide::tower::imageSpan)+15)/16*16,128,256);
+#endif
         if(!f.gpu)f.gpu=std::make_unique<tide::gpu::TowerPass>();
         if(!f.gpu->render(p,f.image))renderCPU(p,f.image);
         g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);g.setOpacity(scene.get(RoomProcessor::partId(identity,"mute"))>.5f?.40f:1.f);

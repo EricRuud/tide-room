@@ -4,12 +4,21 @@
 #include <stdexcept>
 
 namespace tide::room {
-SpatialSolver::~SpatialSolver(){if(fft)vDSP_destroy_fftsetupD(fft);}
+SpatialSolver::~SpatialSolver(){
+#if defined(__APPLE__) && !defined(TIDE_PORTABLE_FFT)
+    if(fft)vDSP_destroy_fftsetupD(fft);
+#endif
+}
 void SpatialSolver::prepare(int size,double rate,int oversampling){
     if(size<16||(size&(size-1))||rate<=0||(oversampling!=1&&oversampling!=2&&oversampling!=4))throw std::invalid_argument("Invalid spatial FFT size/rate");
-    n=size;padded=oversampling*n;bins=n/2+1;baseOrder=(int)std::log2(n);paddedOrder=(int)std::log2(padded);if(fft)vDSP_destroy_fftsetupD(fft);
+    n=size;padded=oversampling*n;bins=n/2+1;baseOrder=(int)std::log2(n);paddedOrder=(int)std::log2(padded);
+#if defined(__APPLE__) && !defined(TIDE_PORTABLE_FFT)
+    if(fft)vDSP_destroy_fftsetupD(fft);
     fft=vDSP_create_fftsetupD((vDSP_Length)paddedOrder,kFFTRadix2);
     if(!fft)throw std::runtime_error("Cannot allocate spatial FFT");
+#else
+    fft.prepare(padded);
+#endif
     scratch.resize((size_t)padded/2+1);
     for(auto* s:{&hs,&m,&g,&candidate,&candidateG,&step,&residual,&z,&direction,&ap,&temporary})s->resize((size_t)bins);
     h.resize((size_t)n);baseScratch.resize((size_t)n);frequency.resize((size_t)bins);pre.resize((size_t)bins);
@@ -17,10 +26,14 @@ void SpatialSolver::prepare(int size,double rate,int oversampling){
     for(int k=0;k<bins;++k){const double f=k*rate/n;frequency[(size_t)k]=k==n/2?0:f/std::sqrt(f*f+3500.*3500.);}
 }
 void SpatialSolver::transform(S& a,int size,bool inverse){
+#if defined(__APPLE__) && !defined(TIDE_PORTABLE_FFT)
     auto* d=reinterpret_cast<double*>(a.data());DSPDoubleSplitComplex split{d,d+1};
     if(inverse)a[0].imag(a[(size_t)size/2].real());
     vDSP_fft_zripD(fft,&split,2,(vDSP_Length)(size==n?baseOrder:paddedOrder),inverse?kFFTDirection_Inverse:kFFTDirection_Forward);
     if(!inverse){const double scale=.5/size;vDSP_vsmulD(d,1,&scale,d,1,(vDSP_Length)size);a[(size_t)size/2]={a[0].imag(),0};a[0].imag(0);}
+#else
+    fft.transform(a.data(),size,inverse);
+#endif
 }
 void SpatialSolver::spectrum(const double* input,S& dest){
     std::copy_n(input,n,reinterpret_cast<double*>(scratch.data()));transform(scratch,n,false);

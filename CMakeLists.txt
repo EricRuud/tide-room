@@ -2,7 +2,21 @@ cmake_minimum_required(VERSION 3.22)
 project(Tide VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+if(APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
+endif()
+if(MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    add_compile_options(/utf-8 /bigobj)
+    add_link_options(/STACK:16777216)
+    set(TIDE_NO_FMA /fp:strict)
+else()
+    set(TIDE_NO_FMA -ffp-contract=off)
+endif()
+set(TIDE_INSTRUMENT_FORMATS VST3 Standalone)
+if(APPLE)
+    list(APPEND TIDE_INSTRUMENT_FORMATS AU)
+endif()
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/.cache/JUCE" CACHE PATH "JUCE checkout")
 add_subdirectory(${JUCE_PATH} juce EXCLUDE_FROM_ALL)
 juce_add_binary_data(TideAssets HEADER_NAME TideAssets.h NAMESPACE TideAssets
@@ -12,7 +26,7 @@ juce_add_plugin(Tide
     BUNDLE_ID "com.ericruud.tide"
     PLUGIN_MANUFACTURER_CODE ErRd
     PLUGIN_CODE TIde
-    FORMATS VST3 AU Standalone
+    FORMATS ${TIDE_INSTRUMENT_FORMATS}
     PRODUCT_NAME "Tide"
     DESCRIPTION "Expressive wavefolding instrument"
     IS_SYNTH TRUE
@@ -35,6 +49,9 @@ target_link_libraries(TideCheck PRIVATE Tide juce::juce_audio_utils juce::juce_d
 target_compile_definitions(TideCheck PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 enable_testing()
 add_test(NAME TideNative COMMAND TideCheck)
+add_executable(TideFourierCheck native/Room/PortableFFTChecks.cpp native/Room/SpatialSolver.cpp)
+target_compile_definitions(TideFourierCheck PRIVATE TIDE_PORTABLE_FFT=1)
+add_test(NAME TidePortableFourier COMMAND TideFourierCheck)
 juce_add_console_app(TideHostCheck PRODUCT_NAME "TideHostCheck")
 target_sources(TideHostCheck PRIVATE native/Tests/Host.cpp)
 target_link_libraries(TideHostCheck PRIVATE juce::juce_audio_utils juce::juce_recommended_config_flags)
@@ -65,6 +82,8 @@ juce_add_binary_data(RoomHrtfAssets HEADER_NAME RoomHrtfAssets.h NAMESPACE RoomH
 juce_add_binary_data(RoomPresetAssets HEADER_NAME RoomPresetAssets.h NAMESPACE RoomPresetAssets SOURCES native/Assets/Presets/SlowTides.xml)
 option(TIDE_NATIVE_WOOD "Build the native shared room audition" OFF)
 option(TIDE_CLEAR_ROOM "Use the transparent full-rate room in the native audition" OFF)
+option(TIDE_METAL "Use Apple's Metal renderer" ${APPLE})
+option(TIDE_CPU_PREVIEW "Bound CPU rendering resolution for the Windows preview" ${WIN32})
 if(TIDE_CLEAR_ROOM AND NOT TIDE_NATIVE_WOOD)
     message(FATAL_ERROR "TIDE_CLEAR_ROOM requires TIDE_NATIVE_WOOD")
 endif()
@@ -93,7 +112,7 @@ target_compile_definitions(TideRoom PUBLIC JUCE_PLUGINHOST_VST3=1
     JUCE_USE_CUSTOM_PLUGIN_STANDALONE_APP=1 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
 target_link_libraries(TideRoom PRIVATE RoomHrtfAssets RoomPresetAssets juce::juce_audio_utils juce::juce_dsp
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
-if(APPLE)
+if(APPLE AND TIDE_METAL)
     enable_language(OBJCXX)
     find_program(TIDE_XCRUN xcrun REQUIRED)
     set(TIDE_METAL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/RoomEffects.metallib")
@@ -113,6 +132,9 @@ if(APPLE)
 else()
     target_sources(TideRoom PRIVATE native/Room/GpuEffectsStub.cpp)
 endif()
+if(TIDE_CPU_PREVIEW)
+    target_compile_definitions(TideRoom PUBLIC TIDE_CPU_PREVIEW=1)
+endif()
 if(TIDE_NATIVE_WOOD)
     target_compile_definitions(TideRoom PUBLIC TIDE_NATIVE_WOOD=1 TIDE_NO_CONVOLUTION=1)
     target_sources(TideRoom PRIVATE native/Room/WoodRoom.cpp
@@ -126,30 +148,44 @@ if(TIDE_NATIVE_WOOD)
         target_link_libraries(TideClearCheck PRIVATE TideRoom juce::juce_audio_utils juce::juce_dsp)
     endif()
     # Upstream DSP is retained verbatim, including its original style.
+    if(MSVC)
+        set(TIDE_VENDOR_WARNINGS /w)
+    else()
+        set(TIDE_VENDOR_WARNINGS -w)
+    endif()
     set_source_files_properties(native/third_party/airwindows/kwoodroom/kWoodRoom.cpp
-        native/third_party/airwindows/kwoodroom/kWoodRoomProc.cpp PROPERTIES COMPILE_OPTIONS "-w")
+        native/third_party/airwindows/kwoodroom/kWoodRoomProc.cpp PROPERTIES COMPILE_OPTIONS "${TIDE_VENDOR_WARNINGS}")
     juce_add_console_app(TideWoodCheck PRODUCT_NAME "TideWoodCheck")
     target_sources(TideWoodCheck PRIVATE native/Room/WoodChecks.cpp)
     target_link_libraries(TideWoodCheck PRIVATE TideRoom juce::juce_audio_utils juce::juce_dsp)
 else()
     target_link_libraries(TideRoom PRIVATE TideAssets)
 endif()
-set_source_files_properties(native/Room/EightTwentyOneTape.cpp PROPERTIES COMPILE_OPTIONS "-ffp-contract=off")
+set_source_files_properties(native/Room/EightTwentyOneTape.cpp PROPERTIES COMPILE_OPTIONS "${TIDE_NO_FMA}")
 set(TIDE_ROOM_OUTPUT_DIRECTORY "" CACHE PATH "Optional standalone output folder for a separate audition build")
 set(TIDE_900_MODEL_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/821/90030" CACHE PATH "Selected 900/30 calibration coefficients")
 if(TIDE_ROOM_OUTPUT_DIRECTORY)
     set_target_properties(TideRoom_Standalone PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${TIDE_ROOM_OUTPUT_DIRECTORY}")
+    foreach(config DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
+        set_target_properties(TideRoom_Standalone PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${config} "${TIDE_ROOM_OUTPUT_DIRECTORY}")
+    endforeach()
+endif()
+if(APPLE)
+    set(TIDE_ROOM_RESOURCES "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources")
+else()
+    set(TIDE_ROOM_RESOURCES "$<TARGET_FILE_DIR:TideRoom_Standalone>/Resources")
 endif()
 add_custom_command(TARGET TideRoom_Standalone POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/LICENSE.txt"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/THIRD_PARTY_NOTICES.md"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/ThirdPartyNotices" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/ThirdPartyNotices"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/821/model" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/821/model"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TIDE_900_MODEL_DIRECTORY}" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/821/90030"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/821/hq" "$<TARGET_BUNDLE_DIR:TideRoom_Standalone>/Contents/Resources/821/hq")
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${TIDE_ROOM_RESOURCES}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE" "${TIDE_ROOM_RESOURCES}/LICENSE.txt"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md" "${TIDE_ROOM_RESOURCES}/THIRD_PARTY_NOTICES.md"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/ThirdPartyNotices" "${TIDE_ROOM_RESOURCES}/ThirdPartyNotices"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/821/model" "${TIDE_ROOM_RESOURCES}/821/model"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${TIDE_900_MODEL_DIRECTORY}" "${TIDE_ROOM_RESOURCES}/821/90030"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/native/Assets/821/hq" "${TIDE_ROOM_RESOURCES}/821/hq")
 juce_add_console_app(Tide821Check PRODUCT_NAME "Tide821Check")
 target_sources(Tide821Check PRIVATE native/Room/EightTwentyOneChecks.cpp)
-target_compile_options(Tide821Check PRIVATE -ffp-contract=off)
+target_compile_options(Tide821Check PRIVATE ${TIDE_NO_FMA})
 target_link_libraries(Tide821Check PRIVATE TideRoom juce::juce_audio_utils juce::juce_dsp)
 juce_add_console_app(TideWornCheck PRODUCT_NAME "TideWornCheck")
 target_sources(TideWornCheck PRIVATE native/Room/WornChecks.cpp native/Room/WornTape.cpp)
