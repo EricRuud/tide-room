@@ -65,6 +65,8 @@ private:
     };
     std::array<Card,3> cards;
     juce::ComboBox placement;
+    juce::Label reverbCreditCaption;
+    juce::HyperlinkButton reverbCredit{"Chris Johnson / Airwindows",juce::URL("https://www.airwindows.com/")};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> placementAttachment;
     juce::TextButton tapeOn{"Tape off"};
     std::unique_ptr<ButtonAttachment> tapeAttachment;

@@ -205,6 +205,12 @@ RoomEditor::RoomEditor(RoomProcessor& p):AudioProcessorEditor(p),scene(p),harmon
 #if TIDE_NATIVE_WOOD
     editorButton.setVisible(false);
     placement.setTooltip("Headphones uses measured ear filters. Stereo uses speaker panning. Both share the same room.");
+    addAndMakeVisible(reverbCreditCaption);reverbCreditCaption.setText("kWoodRoom reverb credit",juce::dontSendNotification);
+    reverbCreditCaption.setFont(juce::FontOptions(10.f));reverbCreditCaption.setBorderSize({});
+    reverbCreditCaption.setColour(juce::Label::textColourId,tide::glass::muted);
+    addAndMakeVisible(reverbCredit);reverbCredit.setFont(juce::Font(juce::FontOptions(11.f)),false,juce::Justification::centredLeft);
+    reverbCredit.setColour(juce::HyperlinkButton::textColourId,tide::glass::text.withAlpha(.78f));
+    reverbCredit.setTooltip("Chris Johnson / Airwindows created kWoodRoom, retained in Tide Room's WoodRoom engine under the MIT license. Visit Airwindows.");
 #endif
     setSize(1200,900);startTimerHz(25);timerCallback();
 }
@@ -261,6 +267,7 @@ void RoomEditor::resized(){
     recordButton.setBounds(688,31,112,33);recordingFileButton.setBounds(1074,77,86,25);recordingTime.setBounds(901,77,162,25);
     minimalTides.setBounds(40,374,174,334);postProcessing.setBounds(40,772,946,108);
     placement.setBounds(975,625,185,28);
+    reverbCreditCaption.setBounds(975,684,185,18);reverbCredit.setBounds(974,703,186,20);
     const auto room=tide::layout::roomBounds().toNearestInt();immersiveButton.setBounds(room.getRight()-190,room.getY()+12,178,29);
     for(int i=0;i<5;++i){auto& control=global[(size_t)(i<2?i+3:i+4)];control.setBounds(1041,408+i*35,119,25);control.setTextBoxStyle(juce::Slider::TextBoxRight,false,53,25);}
     editorButton.setBounds(975,698,185,25);
