@@ -1,0 +1,11 @@
+* text=auto
+*.sh text eol=lf
+*.png binary
+*.icns binary
+*.wav binary
+*.bin binary
+
+# Preserve upstream source and notices verbatim, including their whitespace.
+native/third_party/** -text -whitespace
+native/Lab/airwindows/** -text -whitespace
+native/Assets/ThirdPartyNotices/** -text -whitespace

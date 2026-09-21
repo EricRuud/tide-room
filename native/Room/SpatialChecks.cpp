@@ -1,0 +1,69 @@
+#include "RoomProcessor.h"
+#include "RoomEditor.h"
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <chrono>
+
+namespace {
+using namespace tide::room;
+void check(bool ok,const char* what){if(!ok)throw std::runtime_error(what);}
+void wav(const juce::File& file,const juce::AudioBuffer<float>& b,double rate){juce::WavAudioFormat fmt;auto stream=file.createOutputStream();check(stream!=nullptr,"WAV stream");std::unique_ptr<juce::AudioFormatWriter> w(fmt.createWriterFor(stream.release(),rate,2,32,{},0));check(w&&w->writeFromAudioSampleBuffer(b,0,b.getNumSamples()),"Write WAV");}
+void binary(const juce::File& file,const double* data,int n){std::ofstream s(file.getFullPathName().toStdString(),std::ios::binary);s.write(reinterpret_cast<const char*>(data),n*(int)sizeof(double));check((bool)s,"Write binary");}
+struct Stats {double total=0,worst=0,p99=0,residual=0;uint64_t guards=0,limited=0;};
+juce::AudioBuffer<float> run(const juce::AudioBuffer<float>& input,double rate,SpatialSettings s,int block,Stats& st,bool parallel=true){
+    SpatialTape t;t.setParallelForTest(parallel);t.setSettings(s);t.prepare(rate);juce::AudioBuffer<float> result;result.makeCopyOf(input);std::vector<double> times;
+    for(int offset=0;offset<result.getNumSamples();offset+=block){const int n=std::min(block,result.getNumSamples()-offset);juce::AudioBuffer<float> b(result.getArrayOfWritePointers(),2,offset,n);const auto start=std::chrono::steady_clock::now();t.process(b);const double time=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();st.total+=time;times.push_back(time);st.worst=std::max(st.worst,time);}
+    std::sort(times.begin(),times.end());st.p99=times[(size_t)(times.size()*.99)];st.guards=t.guardCount();st.limited=t.limitedFrames();st.residual=t.maximumResidual();return result;
+}
+void finite(const juce::AudioBuffer<float>& b){for(int c=0;c<2;++c)for(int i=0;i<b.getNumSamples();++i)check(std::isfinite(b.getSample(c,i)),"Non-finite stream");}
+double diff(const juce::AudioBuffer<float>& a,const juce::AudioBuffer<float>& b){double m=0;for(int c=0;c<2;++c)for(int i=0;i<a.getNumSamples();++i)m=std::max(m,(double)std::abs(a.getSample(c,i)-b.getSample(c,i)));return m;}
+void checks(const juce::File& out){
+    for(double sr:{44100.,48000.,96000.})for(int q=0;q<3;++q){
+        juce::AudioBuffer<float> x(2,8192);for(int i=0;i<x.getNumSamples();++i){const double v=.25*std::sin(juce::MathConstants<double>::twoPi*193*i/sr)+.04*std::sin(juce::MathConstants<double>::twoPi*11003*i/sr);x.setSample(0,i,(float)v);x.setSample(1,i,(float)v);}
+        SpatialSettings s;s.trim=0;s.quality=q;Stats a,b,c;auto reference=run(x,sr,s,512,a,false);auto uneven=run(x,sr,s,127,b,false);auto threaded=run(x,sr,s,1024,c,true);finite(reference);check(diff(reference,uneven)==0&&diff(reference,threaded)==0,"Stream depends on callback size or worker scheduling");check(a.guards==0&&a.limited==0,"Normal stimulus exceeded solver bounds");
+        for(int i=0;i<x.getNumSamples();++i)check(reference.getSample(0,i)==reference.getSample(1,i),"Mono symmetry");
+        s.enabled=false;Stats d;auto dry=run(x,sr,s,117,d,false);for(int i=0;i<x.getNumSamples();++i)check(dry.getSample(0,i)==(i<768?0:x.getSample(0,i-768)),"Dry latency incorrect");
+        std::cout<<"PASS stream sr="<<sr<<" q="<<(1<<q)<<" partition/worker/mono/dry residual="<<a.residual<<"\n";
+    }
+    for(int q=0;q<3;++q){SpatialSettings s;s.quality=q;s.drive=36;s.softness=96;s.trim=0;juce::AudioBuffer<float> x(2,16384);x.clear();for(int i=0;i<x.getNumSamples()/2;++i)x.setSample(0,i,(float)(.8*std::sin(i*.077)+.05*std::sin(i*2.07)));Stats st;auto y=run(x,48000,s,512,st);finite(y);check(st.guards==0,"Stress numerical recovery");check(y.getMagnitude(0,y.getNumSamples())<.08f,"First transient escaped drive compensation");check(y.getMagnitude(1,0,y.getNumSamples())==0,"Stereo crosstalk");check(y.getMagnitude(0,15000,1000)<1e-8,"Silence tail stuck");std::cout<<"STRESS q="<<(1<<q)<<" peak="<<y.getMagnitude(0,y.getNumSamples())<<" limited="<<st.limited<<" residual="<<st.residual<<"\n";}
+    // Exercise all control changes, bypass, and model transitions with a continuous tone.
+    RoomTape tape;TapeSettings old;old.enabled=true;SpatialSettings spatial;spatial.trim=0;tape.setSettings(old,spatial,1);tape.prepare(48000,512);juce::AudioBuffer<float> movement(2,48000*3);int mode=1;
+    for(int offset=0;offset<movement.getNumSamples();offset+=128){const int n=std::min(128,movement.getNumSamples()-offset);const int segment=offset/12000;mode=segment==5||segment==6?0:1;spatial.quality=segment%3;spatial.drive=segment%2?36:20;spatial.softness=segment%2?384:0;old.enabled=segment!=8;old.mix=segment==9?.5f:1;tape.setSettings(old,spatial,mode);juce::AudioBuffer<float> b(movement.getArrayOfWritePointers(),2,offset,n);for(int i=0;i<n;++i)for(int c=0;c<2;++c)b.setSample(c,i,.1f*(float)std::sin(juce::MathConstants<double>::twoPi*220*(offset+i)/48000));tape.process(b);}
+    finite(movement);check(tape.guardCount()==0,"Control transition recovery");double jump=0;for(int i=1;i<movement.getNumSamples();++i)jump=std::max(jump,(double)std::abs(movement.getSample(0,i)-movement.getSample(0,i-1)));check(jump<.025,"Control transition click");wav(out.getChildFile("control-transitions.wav"),movement,48000);std::cout<<"PASS control/mode/quality changes max_sample_step="<<jump<<"\n";
+    RoomProcessor p(false);check(p.get("tapeModel")==1&&p.get("tapeQuality")==2,"Fresh defaults");p.set("spatialDrive",31.5f);p.set("spatialSoftness",71.2f);p.set("spatialTrim",3.4f);p.set("tapeQuality",0);juce::MemoryBlock data;p.getStateInformation(data);p.set("tapeModel",0);p.set("spatialDrive",0);p.setStateInformation(data.getData(),(int)data.getSize());check(p.get("tapeModel")==1&&std::abs(p.get("spatialDrive")-31.5f)<.01&&std::abs(p.get("spatialSoftness")-71.2f)<.01&&std::abs(p.get("spatialTrim")-3.4f)<.01&&p.get("tapeQuality")==0,"Spatial state roundtrip");
+    auto tree=p.parameters.copyState();for(const char* id:{"tapeModel","spatialDrive","spatialSoftness","spatialTrim","tapeQuality"})tree.removeChild(tree.getChildWithProperty("id",id),nullptr);auto xml=tree.createXml();juce::AudioProcessor::copyXmlToBinary(*xml,data);p.setStateInformation(data.getData(),(int)data.getSize());check(p.get("tapeModel")==0&&p.get("tapeOn")==1,"Old scene migration");std::cout<<"PASS fresh defaults, state roundtrip, original-model migration\n";
+    p.set("tapeModel",1);p.set("spatialSoftness",307.2f);p.setRateAndBufferSizeDetails(48000,1024);p.prepareToPlay(48000,1024);check(p.getLatencySamples()==960,"Reported latency");std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());juce::PNGImageFormat png;auto stream=out.getChildFile("room.png").createOutputStream();png.writeImageToStream(editor->createComponentSnapshot(editor->getLocalBounds()),*stream);auto tapeImage=static_cast<RoomEditor*>(editor.get())->tapePanelSnapshot();stream=out.getChildFile("tape.png").createOutputStream();png.writeImageToStream(tapeImage,*stream);
+}
+void renderFile(const juce::File& file,const juce::File& out){
+    juce::AudioFormatManager formats;formats.registerBasicFormats();std::unique_ptr<juce::AudioFormatReader> r(formats.createReaderFor(file));check(r&&r->numChannels==2,"Stereo WAV required");const int length=std::min((int)r->lengthInSamples,(int)(r->sampleRate*8));juce::AudioBuffer<float> x(2,length+2048);x.clear();r->read(&x,0,std::min((int)r->lengthInSamples,x.getNumSamples()),0,true,true);
+    for(int q=0;q<3;++q){SpatialSettings s;s.drive=(float)(20*std::log10(24.));s.trim=0;s.quality=q;Stats st;auto processed=run(x,r->sampleRate,s,1024,st);juce::AudioBuffer<float> aligned(processed.getArrayOfWritePointers(),2,768,length);wav(out.getChildFile("quality-"+juce::String(1<<q)+".wav"),aligned,r->sampleRate);check(st.guards==0&&st.limited==0,"Music render failed convergence");std::cout<<"MUSIC q="<<(1<<q)<<" cpu_fraction="<<st.total/(x.getNumSamples()/r->sampleRate)<<" p99_ms="<<st.p99*1000<<" worst_ms="<<st.worst*1000<<" residual="<<st.residual<<" guards="<<st.guards<<"\n";}
+}
+void probes(const juce::File& out){
+    std::array<double,1024> x{},y{};for(int test=0;test<5;++test){for(int i=0;i<1024;++i){const double phase=juce::MathConstants<double>::twoPi*i/1024;x[(size_t)i]=test<3?3*std::sin(phase*(test==0?17:test==1?128:317)):test==3?3*std::sin(phase*53)+.5*std::sin(phase*281):12*std::sin(phase*17);}
+        binary(out.getChildFile("input-"+juce::String(test)+".f64"),x.data(),1024);
+        for(int q=0;q<3;++q){SpatialSolver s;s.prepare(1024,48000,1<<q);auto result=s.solve(x.data(),y.data(),24);check(result.finite&&result.residual<2e-7,"Probe solver convergence");binary(out.getChildFile("probe-"+juce::String(test)+"-q"+juce::String(1<<q)+".f64"),y.data(),1024);std::cout<<"PROBE test="<<test<<" q="<<(1<<q)<<" residual="<<result.residual<<" newton="<<result.newton<<" cg="<<result.cg<<"\n";}
+    }
+}
+void softnessChecks(const juce::File& out){
+    auto amplitude=[](const std::array<double,1024>& x,int bin){double re=0,im=0;for(int i=0;i<1024;++i){const double angle=juce::MathConstants<double>::twoPi*bin*i/1024;re+=x[(size_t)i]*std::cos(angle);im+=x[(size_t)i]*std::sin(angle);}return 2*std::hypot(re,im)/1024;};
+    for(int quality:{1,2,4})for(double level:{.001,1.}){
+        SpatialSolver solver;solver.prepare(1024,48000,quality);std::array<double,1024> input{},previous{},extended{};
+        for(int i=0;i<1024;++i){const double angle=juce::MathConstants<double>::twoPi*i/1024;input[(size_t)i]=level*(4*std::sin(5*angle)+.5*std::sin(128*angle));}
+        const auto a=solver.solve(input.data(),previous.data(),96),b=solver.solve(input.data(),extended.data(),384);
+        check(a.finite&&b.finite&&a.residual<2e-7&&b.residual<2e-7,"Extended softness probe convergence");
+        const double low=20*std::log10(amplitude(extended,5)/amplitude(previous,5));
+        const double high=20*std::log10(amplitude(extended,128)/amplitude(previous,128));
+        check(level<.01?std::abs(high)<.05:high-low < -2,"Extended softness is not a stronger level-dependent HF restraint");
+        std::cout<<"SOFTNESS q="<<quality<<" input_scale="<<level<<" 400_vs_100_low_db="<<low<<" high_db="<<high<<" residual="<<b.residual<<"\n";
+    }
+    for(int q=0;q<3;++q){juce::AudioBuffer<float> input(2,24000);for(int i=0;i<input.getNumSamples();++i){const float x=.5f*(float)std::sin(i*.071)+.07f*(float)std::sin(i*1.14);input.setSample(0,i,x);input.setSample(1,i,x*.8f);}SpatialSettings s;s.drive=36;s.softness=384;s.trim=0;s.quality=q;Stats stats;const auto result=run(input,48000,s,1024,stats);finite(result);check(stats.guards==0,"Extended softness required numerical recovery");wav(out.getChildFile("softness-400-q"+juce::String(1<<q)+".wav"),result,48000);std::cout<<"SOFTNESS_STREAM q="<<(1<<q)<<" cpu_fraction="<<stats.total/.5<<" peak="<<result.getMagnitude(0,result.getNumSamples())<<" limited="<<stats.limited<<" residual="<<stats.residual<<"\n";}
+    RoomProcessor p(false);p.set("spatialSoftness",307.2f);juce::MemoryBlock state;p.getStateInformation(state);p.set("spatialSoftness",24);p.setStateInformation(state.getData(),(int)state.getSize());check(std::abs(p.get("spatialSoftness")-307.2f)<.01f,"Extended softness state lost");
+    std::cout<<"PASS extended HF softness: level dependence, 1/2/4x convergence, maximum-drive streams, 320% state recall\n";
+}
+void scene(const juce::File& out,bool longReference=false){
+    RoomProcessor p(false);p.setRateAndBufferSizeDetails(48000,1024);p.prepareToPlay(48000,1024);check(p.loadRoom(juce::File("/Library/Audio/Plug-Ins/VST3/DPA_Reverside.vst3")),p.status().toRawUTF8());p.selectVoice(0,16);p.selectVoice(1,14);p.selectVoice(2,19);p.set("p2_level",-9);p.updateRoom();juce::MidiBuffer midi;juce::AudioBuffer<float> warmup(2,1024);
+    const int seconds=longReference?30:12;for(int q=longReference?2:0;q<3;++q){p.quiet();p.set("tapeQuality",(float)q);p.prepareToPlay(48000,1024);p.updateRoom();for(int i=0;i<80;++i)p.processBlock(warmup,midi);p.play();juce::AudioBuffer<float> audio(2,48000*seconds);std::vector<double> times;double total=0;int late=0;for(int offset=0;offset<audio.getNumSamples();offset+=1024){const int n=std::min(1024,audio.getNumSamples()-offset);juce::AudioBuffer<float> b(audio.getArrayOfWritePointers(),2,offset,n);auto start=std::chrono::steady_clock::now();p.processBlock(b,midi);const double time=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count();total+=time;times.push_back(time);if(time>n/48000.)++late;}finite(audio);std::sort(times.begin(),times.end());check(p.tapeGuards()==0&&audio.getMagnitude(0,audio.getNumSamples())<.95f,"Scene headroom/guard");wav(out.getChildFile("room-q"+juce::String(1<<q)+".wav"),audio,48000);std::cout<<"SCENE q="<<(1<<q)<<" cpu_fraction="<<total/seconds<<" p99_ms="<<times[(size_t)(times.size()*.99)]*1000<<" worst_ms="<<times.back()*1000<<" over_budget="<<late<<" peak="<<audio.getMagnitude(0,audio.getNumSamples())<<" guards="<<p.tapeGuards()<<"\n";}
+}
+}
+int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;std::cout<<std::unitbuf;try{check(argc>=3,"Use --checks/--probes/--softness/--render/--scene NEW_OUTPUT [INPUT]");auto out=juce::File::getCurrentWorkingDirectory().getChildFile(argv[2]);check(!out.exists(),"Use a new output directory");out.createDirectory();const juce::String mode=argv[1];if(mode=="--checks")checks(out);else if(mode=="--probes")probes(out);else if(mode=="--softness")softnessChecks(out);else if(mode=="--scene"||mode=="--scene-reference")scene(out,mode=="--scene-reference");else if(mode=="--render"&&argc==4)renderFile(juce::File::getCurrentWorkingDirectory().getChildFile(argv[3]),out);else check(false,"Unknown command");return 0;}catch(const std::exception& e){std::cerr<<"FAIL "<<e.what()<<"\n";return 1;}}

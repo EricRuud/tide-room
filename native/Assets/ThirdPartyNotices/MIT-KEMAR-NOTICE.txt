@@ -1,0 +1,13 @@
+MIT KEMAR head-related transfer function measurements
+Copyright 1994 MIT Media Laboratory.
+Authors: Bill Gardner and Keith Martin.
+Source: https://sound.media.mit.edu/resources/KEMAR.html
+Data: https://sound.media.mit.edu/resources/KEMAR/diffuse.zip
+
+MIT permits unrestricted use, including commercial use, provided the authors are cited.
+Tide Room uses the authors' diffuse-field-equalized measurements, converts their WAV files
+to floating-point coefficients, resamples at device initialization, and interpolates
+between measured directions. This is a generic mannequin, not an individual listener model.
+
+Original archive SHA-256: a48e73137390626ef1e45d1de6a4d98530c6aa570e71b40f7c4442241ed5fa22
+Generated bank SHA-256: c392e8d47e19d477d0e755f358505b7254753aac76806a53acaefa3557a0ef38

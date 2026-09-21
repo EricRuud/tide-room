@@ -1,0 +1,28 @@
+{
+  "description": "Generated numeric calibration data for the retained 821 tape modes. No third-party plugin binaries or reference recordings.",
+  "sha256": {
+    "model/audio.bin": "a85cbb4da26a6e20887da73d2cce685c72b6e333a0ae3d86dc6010e5f00c1366",
+    "model/base.bin": "58167a64079b214d31e95ca29087758a99fe447dc6fc4f5f6f2bd33ce6183949",
+    "model/control.bin": "b02eb69ccb7e6c44faaa76c76e8ab18b5bb78625a8d77c826a1f650374219ae0",
+    "model/dynamic-q.bin": "81efdaa6a42efb6a0e24fa2d0cf5273caee2008fd71948d354ef498060729b17",
+    "model/features.bin": "77cfa0eaa099eeaff2c84ef5ed098a850bd5b544c1d7aba6eb234c2b23057762",
+    "model/lf-correction.bin": "a873f34a65073033f5c08124eec1cb899bce9949b7672973302d9cd8ec5b29e2",
+    "model/quiet-fast-state.bin": "7d8b2f9be3dc4320e1d485df6a5ebba0174dc38e4c72abfd744ec6ea5f293ba4",
+    "model/quiet-width-state.bin": "08712de49f98e981e82f888df18b4618dcfc3aa0c13e3f1e5e708fe45a784541",
+    "model/rest.bin": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+    "model/slow.bin": "3a51116bf4a40bc0d12e88c535bbeaf19daae5949f059ef74dc9ff50830f59b3",
+    "90030/audio.bin": "17ab7503925fe133baea074b02d2edca873685c1f43e16c4dbaec584181b5cbd",
+    "90030/base.bin": "260f3a89f68e0b31f60da2df6b1eb2feada1b366fbfa5ac95631d8dca3b7a1b8",
+    "90030/control.bin": "d190d62b1541da52a3ab3a868e4e73652c7aad4d89c8567bccecf4041fb0ba13",
+    "90030/dynamic-q.bin": "0c0e8cedf9e9dbb843a3c67985c0386a5c426bb70e8f9bc687b17da24442b75d",
+    "90030/features.bin": "77cfa0eaa099eeaff2c84ef5ed098a850bd5b544c1d7aba6eb234c2b23057762",
+    "90030/quiet-fast-state.bin": "a0ce30ff4b2b5550fa02cbf9215efc320b323d98ed3d4e5aa0632baaab575b89",
+    "90030/quiet-width-state.bin": "b66ea7d8cadd8ec99b2bcd5e5b55c638e0604817058d32b5327603d0593f87dc",
+    "90030/rest.bin": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+    "90030/slow.bin": "f2599ecf2fdc3fa01a6d8b848e92f1fdbf5897093dd33bbf47469f411bddbd25",
+    "hq/compensation-4.bin": "448fe8adc79e0582b386a5192241a1ce7f555fa127d0ae45e7646e8ae90380b3",
+    "hq/compensation-8.bin": "f84de1321bee4e7011c787a32e800277d5d6a4b32e1f1b85bc6f23cf398269fa",
+    "hq/long.bin": "a9a33d30b0c324dafa68c05ac0b517a96fbfc648a7546990eb1d140c0234319e",
+    "hq/short.bin": "00271a5a0e4ec051952ccb48390056f9a6edd309532c8b3e4c876ce444ea6288"
+  }
+}

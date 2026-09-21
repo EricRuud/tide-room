@@ -1,0 +1,8 @@
+{
+  "origin": "Original synthetic spaces from space.py, preferred as B/close and C/bloom. No commercial reference audio included.",
+  "files": {
+    "Constants.h": "2adfec69a6d270ae194bb01a37c4395571e0816bf0d2045d5e422a510858df88",
+    "close.wav": "4f4f96bad66e84cab9fef6ebf38ac0b4df48bc565c9d970f10b6081ab947860b",
+    "bloom.wav": "8399752bb1d477fc666feb090ac06e97b57ebe0602a5d98ee9fc08ec7eb762da"
+  }
+}

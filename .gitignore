@@ -1,0 +1,25 @@
+# Local dependencies and generated builds
+/.cache/
+/.venv/
+/build*/
+/dist/
+/artifacts/
+*.app/
+*.dSYM/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local listening material, session data and development environment
+/references/
+/feedback/
+/.agents/
+/.codex/
+*.settings
+*.tideroom
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.mobileprovision

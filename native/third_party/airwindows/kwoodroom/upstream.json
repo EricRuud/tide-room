@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/airwindows/airwindows",
+  "revision": "8efe4521a56bc68f34be0017b1916e1895572849",
+  "path": "plugins/WinVST/kWoodRoom",
+  "license": "MIT",
+  "files": {
+    "kWoodRoom.h": "001109626b06af28f5611791a303617a2fa4577dad3709a6bba32aeeed83c1c4",
+    "kWoodRoom.cpp": "ea5fd67b3ecd8d988e4c89653e399cfffb9422a5fbb1728bdd62ba45f4e6fbb7",
+    "kWoodRoomProc.cpp": "58ea5f61fee9f9d0262d373e9712cf2ca29a120318463347b26fbd150ff17263",
+    "LICENSE": "b4f5719b00ba3fecf8c0ce651e843651bd80f08a10cf4cf1f00e673a5bcaf23b"
+  }
+}

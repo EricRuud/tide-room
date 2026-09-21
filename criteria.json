@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "status": "provisional engineering limits; musical preferences not calibrated",
+  "sample_rates": [44100, 48000],
+  "fft_size": 8192,
+  "pitch_bins": [17, 83, 281, 887, 1583],
+  "drive_values": [1.3, 3.0, 5.5, 9.0],
+  "measurement_band_fraction_of_sample_rate": 0.40,
+  "max_stationary_reference_residual_db": -90.0,
+  "max_control_reference_residual_db": -80.0,
+  "max_reference_convergence_db": -110.0,
+  "min_output_rms_dbfs": -35.0,
+  "max_output_peak": 0.99,
+  "oversampling_candidates": [1, 2, 4, 8],
+  "motion_depth": 0.7,
+  "motion_target_range": null,
+  "listening_rms_dbfs": -22.0,
+  "seed": 208
+}
