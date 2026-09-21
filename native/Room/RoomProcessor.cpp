@@ -255,7 +255,7 @@ void RoomProcessor::openRoomEditor(){if(room)room->openEditor();}
 float RoomProcessor::get(const juce::String& id) const {return parameters.getRawParameterValue(id)->load();}
 void RoomProcessor::set(const juce::String& id,float value){if(auto* p=parameters.getParameter(id)){p->beginChangeGesture();p->setValueNotifyingHost(p->convertTo0to1(value));p->endChangeGesture();}}
 void RoomProcessor::useSimpleInterface(){
-    simpleInterface=true;set("tapeModel",4);
+    simpleInterface=true;if((int)get("tapeModel")!=3)set("tapeModel",4);
     // A neutral travel setting preserves an old scene with all motion off,
     // while making the simplified Travel control useful when it is raised.
     bool moving=false;for(int i=0;i<tide::room::lfoCount;++i)moving|=get(lfoId(i,"on"))>.5f;

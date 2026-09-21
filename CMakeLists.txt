@@ -68,7 +68,7 @@ option(TIDE_CLEAR_ROOM "Use the transparent full-rate room in the native auditio
 if(TIDE_CLEAR_ROOM AND NOT TIDE_NATIVE_WOOD)
     message(FATAL_ERROR "TIDE_CLEAR_ROOM requires TIDE_NATIVE_WOOD")
 endif()
-juce_add_plugin(TideRoom VERSION 0.12.0 COMPANY_NAME "Eric Ruud"
+juce_add_plugin(TideRoom VERSION 0.12.1 COMPANY_NAME "Eric Ruud"
     BUNDLE_ID "com.ericruud.tide.room" PLUGIN_MANUFACTURER_CODE ErRd PLUGIN_CODE TRom
     ICON_BIG "native/Assets/tide-room-icon.png"
     PLIST_TO_MERGE "<plist><dict><key>LSMinimumSystemVersion</key><string>${CMAKE_OSX_DEPLOYMENT_TARGET}</string></dict></plist>"

@@ -11,9 +11,9 @@ Each instrument is a stack of glass plates. A plate represents a pitch, lights w
 - Tides that move the instruments and modulate their sound; full routing in **Advanced…**.
 - Measured headphone spatialization, moving wall reflections and a shared room tail.
 - Metal-rendered water and glass, note-reactive prism effects, and fullscreen listener view.
-- Worn tape, a master fader, complete-scene presets and stereo WAV recording.
+- Worn tape or 821, a master fader, complete-scene presets and stereo WAV recording.
 
-The current version is **0.12.0**. This is an experimental instrument; the current interface exposes Worn tape while earlier tape models remain in the source for preset compatibility.
+The current version is **0.12.1**. The tape selector offers **Worn tape** and **821**, with independent settings saved in each scene. The 821 models require **48 kHz**; at other sample rates the app explains the requirement and passes aligned dry audio.
 
 ## Build and run
 
@@ -48,7 +48,7 @@ Tide Room grew through a collaboration between Eric Ruud and Codex: musical refe
 
 The starting point was an offline sine-wavefolder instrument with a slowly changing tone. The first approved phrase became a preserved baseline. The project then became a playable native synth, acquired plucked and metallic voices, expanded into three instruments moving through a room, and developed its own spatial, tape and visual systems. The glass towers came much later. They grew out of a question about the name: could the instruments have tides that actually influenced their sound?
 
-The account below describes completed development work through **0.12.0**, including experiments that were rejected or retained only in the laboratory. Historical measurements belong to the particular builds and conditions stated; they are not all measurements of today's complete application.
+The account below describes the development through **0.12.0**, followed by the restoration of the 821 controls in **0.12.1**, including experiments that were rejected or retained only in the laboratory. Historical measurements belong to the particular builds and conditions stated; they are not all measurements of today's complete application.
 
 - [The iteration loops](#the-iteration-loops)
 - [Synthesis and the first technical gates](#synthesis-and-the-first-technical-gates)
@@ -165,15 +165,15 @@ Fresh final comparisons were not used for another selection pass. Later probes r
 
 The retained 821 models cover limited settings at 48 kHz. Their 4×/8× modes oversample the final limiter, not every stage. On some final clips the limiter never engaged, so all quality modes produced identical audio. A quiet residual, C++ parity or an “HQ” label cannot establish general equivalence, hardware accuracy or zero aliasing. The [final-evaluation code](native/Lab/p821_final_evaluation.py), [low-frequency freeze protocol](native/Lab/p821_lf_final.py) and [900 refinement selection](native/Lab/p821_900r2_select.py) preserve the mechanics of that work.
 
-#### Why the interface now exposes Worn tape
+#### Worn tape and the return of the 821 option
 
-The current creative direction favored a more adjustable worn-medium effect. **Worn tape is an independent model**, with emphasized recording, smooth nonlinear stages, replay shaping, shared stereo transport, contact-related filtering and dips, hiss/grain and a faint post-echo. Its Old cassette, Unspooled and Home video presets are artistic approximations, not measured reproductions of particular machines.
+The creative direction shifted toward a more adjustable worn-medium effect. **Worn tape is an independent model**, with emphasized recording, smooth nonlinear stages, replay shaping, shared stereo transport, contact-related filtering and dips, hiss/grain and a faint post-echo. Its Old cassette, Unspooled and Home video presets are artistic approximations, not measured reproductions of particular machines.
 
 The important connections are deliberate: a contact event can soften treble, lower level and drag transport together. Both tracks share the main transport so pitch movement does not automatically tear apart the stereo placement. Dip depth was then separated from the other wear controls because the amount of level ducking needed its own musical adjustment.
 
 An early 4× nonlinear path was rejected after strong-drive probes exposed unwanted components. The retained path uses first-order antiderivative antialiasing and 16× FIR oversampling. Tests cover sample rates, callback partitioning, exact silence with noise off, mono behavior, automation, mode changes and stopping after the room tail. In a twelve-second live integration capture, all captured channels were finite, peak callback load was **40.91%**, and no late callback was recorded. That is a short observation on the development machine, not a universal performance guarantee.
 
-The [Worn implementation](native/Room/WornTape.cpp) is the tape processor exposed by the current interface. Earlier tape engines and the frozen 821 coefficients remain for compatibility and further study. Removing their controls did not erase that research or silently reinterpret old parameter IDs.
+The interface was simplified to expose only [Worn tape](native/Room/WornTape.cpp), while the earlier engines and frozen 821 coefficients stayed in the source. In **0.12.1**, 821 returned as an option in the bottom tape strip: 456 / 15 ips or 900 / 30 ips, drive, output, wow/flutter, transport on/off, mix and limiter quality. Scene recall now preserves the selected 821 engine instead of forcing Worn tape. Switching models retains their individual settings; tape power and mix are shared. Slow tides still starts with Worn tape.
 
 ### From planets to playable glass towers
 

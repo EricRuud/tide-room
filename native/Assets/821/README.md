@@ -1,6 +1,6 @@
 # Retained 821 calibration assets
 
-These numeric coefficients support earlier 821 tape settings saved in Tide Room scenes. The current interface exposes Worn tape; the retained model code still loads these files when an older scene selects 821.
+These numeric coefficients support the 821 tape option in Tide Room, alongside Worn tape. Both calibrations require 48 kHz. Their settings and model selection are saved with scenes, using the existing parameter IDs.
 
 - `model`: LF2 research calibration for the 456 / 15 ips mode.
 - `90030`: selected 900 / 30 ips calibration.

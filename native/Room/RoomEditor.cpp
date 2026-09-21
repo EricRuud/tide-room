@@ -34,7 +34,7 @@ void powerButton(juce::TextButton& button){
 }
 class TapePanel final : public juce::Component, private juce::Timer {
 public:
-    TapePanel(RoomProcessor& p):owner(p){
+    TapePanel(RoomProcessor& p):owner(p),model(p){
         powerButton(power);addAndMakeVisible(power);powerAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.parameters,"tapeOn",power);
         powerButton(motionPower);motionPower.setName("821 transport motion");motionPower.setTooltip("Enable the measured Slow transport. Off smoothly returns to perfectly steady playback.");addAndMakeVisible(motionPower);motionPowerAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(p.parameters,"eightMotionOn",motionPower);
         const char* ids[]={"tapeDrive","tapeSaturation","tapeBias","tapeWarmth","tapeMix","spatialDrive","spatialSoftness","spatialTrim","studioDrive","studioCream","studioBias","studioMotion","studioNoise","studioTrim","eightDrive","eightTrim","eightWow","eightFlutter","wornDrive","wornAge","wornMotion","wornDamage","wornNoise","wornTrim","wornDips"};
@@ -42,7 +42,7 @@ public:
         for(size_t i=0;i<sliders.size();++i){auto& c=sliders[i];addAndMakeVisible(c);const bool db=i==0||i==5||i==7||i==8||(i>=13&&i<=15)||i==18||i==23;style(c,db?" dB":"",1);c.setName(ids[i]);c.setTooltip(help[i]);attachments[i]=std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(p.parameters,ids[i],c);
             if(!db){const double scale=i==6?96:1;c.textFromValueFunction=[scale](double v){return juce::String(juce::roundToInt(v/scale*100))+"%";};c.valueFromTextFunction=[scale](const juce::String& v){return v.getDoubleValue()*scale/100;};c.updateText();}
         }
-        addAndMakeVisible(model);model.setName("Tape model");model.addItemList({"Magnetic (0.3)","Spatial","Studio 80 / 15 ips","821","Worn tape"},1);modelAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.parameters,"tapeModel",model);
+        addAndMakeVisible(model);
         addAndMakeVisible(quality);quality.setName("Oversampling");quality.addItemList({"1x  Eco","2x  Balanced","4x  Reference"},1);qualityAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.parameters,"tapeQuality",quality);
         addAndMakeVisible(studioQuality);studioQuality.setName("Studio oversampling");studioQuality.addItemList({"4x  Eco","8x  High","16x  Finest"},1);studioQualityAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.parameters,"studioQuality",studioQuality);
         addAndMakeVisible(eightCalibration);eightCalibration.setName("821 formula and speed");eightCalibration.addItemList({"456 / 15 ips","900 / 30 ips"},1);eightCalibrationAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(p.parameters,"eightCalibration",eightCalibration);eightCalibration.setTooltip("Independently measured tape calibrations. Switching briefly fades through dry.");
@@ -78,15 +78,15 @@ private:
     RoomProcessor& owner;int mode=1;bool initial=false;
     juce::TextButton power{"Tape off"},motionPower{"Motion off"};std::array<juce::TextButton,3> presets;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> powerAttachment,motionPowerAttachment;
-    juce::ComboBox model,quality,studioQuality,eightQuality,eightCalibration,wornMedium;
+    TapeModelSelector model;juce::ComboBox quality,studioQuality,eightQuality,eightCalibration,wornMedium;
     std::array<juce::Slider,25> sliders;
     std::array<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>,25> attachments;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modelAttachment,qualityAttachment,studioQualityAttachment,eightQualityAttachment,eightCalibrationAttachment,wornMediumAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> qualityAttachment,studioQualityAttachment,eightQualityAttachment,eightCalibrationAttachment,wornMediumAttachment;
     juce::TooltipWindow tips{this,700};
 };
 }
 struct RoomEditor::TapeWindow final : juce::DocumentWindow {
-    TapeWindow(RoomProcessor& p,juce::LookAndFeel& look,juce::KeyListener& keys):DocumentWindow("Tide Room - Worn tape",paper,closeButton),keyboard(keys){addKeyListener(&keyboard);setWantsKeyboardFocus(true);setUsingNativeTitleBar(true);setLookAndFeel(&look);auto* controls=new WornTapePanel(p);controls->setLookAndFeel(&look);setContentOwned(controls,true);setResizable(false,false);centreWithSize(getWidth(),getHeight());setVisible(true);}
+    TapeWindow(RoomProcessor& p,juce::LookAndFeel& look,juce::KeyListener& keys):DocumentWindow("Tide Room - Tape",paper,closeButton),keyboard(keys){addKeyListener(&keyboard);setWantsKeyboardFocus(true);setUsingNativeTitleBar(true);setLookAndFeel(&look);auto* controls=new TapePanel(p);controls->setLookAndFeel(&look);setContentOwned(controls,true);setResizable(false,false);centreWithSize(getWidth(),getHeight());setVisible(true);}
     ~TapeWindow() override {removeKeyListener(&keyboard);clearContentComponent();setLookAndFeel(nullptr);}
     void closeButtonPressed() override {setVisible(false);}
     juce::KeyListener& keyboard;
@@ -316,7 +316,7 @@ void RoomEditor::mouseWheelMove(const juce::MouseEvent& e,const juce::MouseWheel
     if(hit<0)return;auto* parameter=scene.parameters.getParameter(RoomProcessor::partId(hit,"y"));parameter->beginChangeGesture();
     parameter->setValueNotifyingHost(parameter->convertTo0to1(juce::jlimit(.1f,.68f,scene.get(RoomProcessor::partId(hit,"y"))+wheel.deltaY*.15f)));parameter->endChangeGesture();repaint();}
 
-juce::Image RoomEditor::tapePanelSnapshot(){WornTapePanel controls(scene);controls.setLookAndFeel(&look);auto image=controls.createComponentSnapshot(controls.getLocalBounds());controls.setLookAndFeel(nullptr);return image;}
+juce::Image RoomEditor::tapePanelSnapshot(){TapePanel controls(scene);controls.setLookAndFeel(&look);auto image=controls.createComponentSnapshot(controls.getLocalBounds());controls.setLookAndFeel(nullptr);return image;}
 juce::Image RoomEditor::motionPanelSnapshot(){MotionPanel controls(scene);controls.setLookAndFeel(&look);auto image=controls.createComponentSnapshot(controls.getLocalBounds());controls.setLookAndFeel(nullptr);return image;}
 
 juce::Image RoomEditor::oceanPanelSnapshot(){OceanPanel controls(scene,&sceneRenderer.towers);controls.setLookAndFeel(&look);auto image=controls.createComponentSnapshot(controls.getLocalBounds());controls.setLookAndFeel(nullptr);return image;}

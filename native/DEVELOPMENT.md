@@ -44,7 +44,7 @@ GUI and Metal checks need a logged-in macOS desktop. They create their own test 
 
 `TowerNotes` defines pitch ordering and the shared visual/acoustic elevations. `TowerOptics` implements the glass and continuous water volume for both C++ and Metal. `RoomEffects.metal`, `GpuEffects.mm` and `RoomSceneRenderer` render the objects and case; visual effects do not alter audio. `RoomPresets` saves complete scenes while retaining older parameter IDs.
 
-The `821` calibration files are tracked in `native/Assets/821`; their SHA-256 manifest is included. They are retained for earlier scenes even though the current tape interface exposes Worn tape. The app build does not depend on experiment output folders. Optional lab scripts can depend on measurement recordings and research artifacts that are not distributed here.
+The `821` calibration files are tracked in `native/Assets/821`; their SHA-256 manifest is included. The tape interface exposes Worn tape and 821 while keeping the original five-engine parameter indices. `TapeModelSelector` maps the two visible choices explicitly to saved values 4 and 3; simplified scene recall preserves either choice. The app build does not depend on experiment output folders. Optional lab scripts can depend on measurement recordings and research artifacts that are not distributed here.
 
 ## Earlier instrument and laboratory workflow
 

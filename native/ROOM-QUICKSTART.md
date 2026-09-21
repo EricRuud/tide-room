@@ -26,7 +26,11 @@ Height controls and vertical motion destinations are hidden. Older height values
 
 ## Tape, master and recording
 
-The bottom panel contains Worn tape and the final master fader. Tape medium, drive, age, transport, contact loss, dip depth, hiss, trim and mix can be adjusted while playing. The arrows show the audio path through the interface.
+The bottom panel contains the tape model selector and the final master fader. Choose **Worn tape** or **821** while playing. Each keeps its own controls; **Enabled** and **Mix** are shared, and the complete selection is saved with the scene. The arrows show the audio path through the interface.
+
+**Worn tape** exposes medium, presets, drive, age, transport, contact loss, dip depth, hiss, output and mix.
+
+**821** offers **456 / 15 ips** and **900 / 30 ips**, drive, output, wow, flutter and a transport switch. Start at 0 dB drive; increasing drive is output-compensated. **Native**, **4x limiter** and **8x limiter** select the final limiter's quality. The models require **48 kHz**: select it in **Options** if the tape panel displays a sample-rate message. At other rates 821 passes aligned dry audio. Switching the model, calibration or quality briefly fades through dry at the same nominal latency.
 
 **Record** writes the final stereo mix to a 32-bit float WAV in `~/Music/Tide Room Recordings`. To capture a tail, stop playback first and stop recording after the sound fades. **Show file** reveals the finished take.
 

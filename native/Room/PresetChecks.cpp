@@ -85,7 +85,35 @@ void panels(const juce::File& out){
     WornTapePanel tape(*p);int combos=0;for(auto* child:tape.getChildren())if(dynamic_cast<juce::ComboBox*>(child))++combos;check(combos==1&&named<juce::ComboBox>(tape,"Worn tape medium"),"Hidden tape engine selector is exposed");
     p->set(RoomProcessor::lfoId(0,"target"),3);{
         MotionPanel motion(*p);auto* destination=named<juce::ComboBox>(motion,"LFO 1 destination");check(destination&&destination->getSelectedId()==1,"Legacy height route did not display as inactive");close(p->get(RoomProcessor::lfoId(0,"target")),3,"Opening Motion overwrote a legacy route");destination->setSelectedId(3,juce::sendNotificationSync);close(p->get(RoomProcessor::lfoId(0,"target")),2,"Filtered destination menu changed the wrong axis");}
-    p->releaseResources();std::cout<<"PASS preset header, hidden legacy GUI, Worn tape only, all Tides attachments and layout snapshots\n";
+    p->releaseResources();std::cout<<"PASS preset header, hidden legacy GUI, Worn controls, all Tides attachments and layout snapshots\n";
+}
+void tapeSelection(const juce::File& out){
+    auto p=std::make_unique<RoomProcessor>(false);restore(*p,RoomPresets::slowTides());p->useSimpleInterface();
+    p->setRateAndBufferSizeDetails(48000,512);p->prepareToPlay(48000,512);
+    RoomPresets store(*p,out.getChildFile("tape-presets"));RoomEditor editor(*p);
+    auto* model=named<juce::ComboBox>(editor,"Tape model");check(model&&model->getNumItems()==2&&model->getSelectedId()==5,"Tape selector did not retain Worn default");
+    check(model->getItemId(0)==5&&model->getItemId(1)==4,"Tape selector exposes legacy engines or uses wrong IDs");
+    const auto worn=p->parameters.copyState();model->setSelectedId(4,juce::sendNotificationSync);close(p->get("tapeModel"),3,"821 selector selected the wrong DSP");
+    for(const auto& value:worn)if(value.hasType("PARAM")&&value.getProperty("id")!="tapeModel")close(p->get(value.getProperty("id").toString()),(float)value.getProperty("value"),"Model selection reset another setting");
+    check(!named<juce::ComboBox>(editor,"Worn tape medium")->isVisible(),"Worn controls remain visible in 821 mode");
+    const char* names[]={"821 drive","821 wow","821 flutter","821 output","Mix"};const char* ids[]={"eightDrive","eightWow","eightFlutter","eightTrim","tapeMix"};
+    const float values[]={7.5f,.6f,1.4f,-2.5f,.73f};
+    for(int i=0;i<5;++i){auto* s=named<juce::Slider>(editor,names[i]);check(s&&s->isVisible()&&s->getParentComponent()->getLocalBounds().contains(s->getBounds()),"821 slider missing or clipped");s->setValue(values[i],juce::sendNotificationSync);close(p->get(ids[i]),values[i],"821 slider targets the wrong parameter");}
+    auto* calibration=named<juce::ComboBox>(editor,"821 formula and speed");auto* quality=named<juce::ComboBox>(editor,"821 limiter quality");auto* motion=named<juce::ToggleButton>(editor,"821 transport motion");
+    check(calibration&&quality&&motion&&calibration->isVisible()&&quality->isVisible()&&motion->isVisible(),"821 mode controls missing");
+    calibration->setSelectedId(2,juce::sendNotificationSync);quality->setSelectedId(3,juce::sendNotificationSync);motion->setToggleState(true,juce::sendNotificationSync);
+    close(p->get("eightCalibration"),1,"821 calibration attachment");close(p->get("eightQuality"),2,"821 quality attachment");close(p->get("eightMotionOn"),1,"821 motion attachment");
+    check(store.saveAs("821 scene").wasOk(),"821 preset save failed");const auto eight=p->parameters.copyState();const auto entry=store.entries().back();
+    p->play();pump(*p);model->setSelectedId(5,juce::sendNotificationSync);pump(*p);close(p->get("tapeModel"),4,"Worn selector selected wrong DSP");
+    for(const char* id:{"wornDrive","wornAge","wornMotion","wornDamage","wornDips","wornNoise","wornTrim","wornMedium"})close(p->get(id),(float)worn.getChildWithProperty("id",id).getProperty("value"),"821 selection changed Worn settings");
+    check(store.load(entry).wasOk()&&p->isPlaying(),"821 preset recall interrupted playback");sameParameters(*p,eight);pump(*p);check(model->getSelectedId()==4&&calibration->isVisible(),"821 preset did not update visible controls");
+    juce::MemoryBlock saved;p->getStateInformation(saved);p->set("tapeModel",4);p->set("eightDrive",0);p->setStateInformation(saved.getData(),(int)saved.getSize());sameParameters(*p,eight);check(model->getSelectedId()==4,"Session restore forced Worn tape");
+    editor.advanceOceanPreview(.7);image(editor.createComponentSnapshot(editor.getLocalBounds()),out.getChildFile("room-821.png"));image(editor.tapePanelSnapshot(),out.getChildFile("821-panel.png"));
+    restore(*p,worn);sameParameters(*p,worn);check(model->getSelectedId()==5&&named<juce::ComboBox>(editor,"Worn tape medium")->isVisible(),"Worn preset recall failed");
+    p->releaseResources();p->set("tapeModel",3);p->setRateAndBufferSizeDetails(44100,512);p->prepareToPlay(44100,512);
+    PostProcessingStrip unsupported(*p);auto* status=named<juce::Label>(unsupported,"821 status");check(status&&status->isVisible()&&status->getText().contains("48 kHz"),"Unsupported 821 rate is not explained in the UI");
+    image(unsupported.createComponentSnapshot(unsupported.getLocalBounds()),out.getChildFile("821-unsupported.png"));p->releaseResources();
+    std::cout<<"PASS Worn/821 selection, independent settings, both calibration/quality controls, complete preset/session recall and visible 48 kHz requirement\n";
 }
 void physicalMacros(){
     using tide::room::PlanetMotion;const PlanetMotion::Positions initial{{{{-.8f,2,1}},{{.8f,2,1}},{{0,5,2}}}};auto crossed=initial;crossed[0][0]=.8f;crossed[1][0]=-.8f;
@@ -116,4 +144,4 @@ void coupling(){const auto disabled=coupledAudio(false,1),zero=coupledAudio(true
     check(delta>.01,"Sound coupling has no audible effect");std::cout<<"PASS Sound coupling: sample-exact zero/bypass and finite, audible water modulation\n";
 }
 }
-int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;std::cout<<std::unitbuf;try{check(argc==2,"TidePresetCheck NEW_OUTPUT");juce::File out(argv[1]);check(!out.exists(),"Output must be new");out.createDirectory();library(out);panels(out);physicalMacros();coupling();return 0;}catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<"\n";return 1;}}
+int main(int argc,char** argv){juce::ScopedJuceInitialiser_GUI gui;std::cout<<std::unitbuf;try{check(argc==2,"TidePresetCheck NEW_OUTPUT");juce::File out(argv[1]);check(!out.exists(),"Output must be new");out.createDirectory();library(out);panels(out);tapeSelection(out);physicalMacros();coupling();return 0;}catch(const std::exception& error){std::cerr<<"FAIL "<<error.what()<<"\n";return 1;}}
