@@ -20,6 +20,20 @@ cmake --build build-room --target TideRoom_Standalone --parallel 3
 
 A full Xcode installation with a working `xcrun -sdk macosx metal` is required to compile the shader library. Runtime playback does not need Xcode, CMake or an external plugin.
 
+The experimental [Windows x64 build](WINDOWS.md) uses Visual Studio 2022 and
+`native/build-room.ps1 -RunChecks`. CMake selects a static MSVC runtime, puts the
+model assets in `Resources` beside the executable, and uses the CPU renderer.
+`TIDE_METAL=OFF` can also exercise this renderer on macOS; `TIDE_CPU_PREVIEW=ON`
+limits its image resolution. These switches leave the normal Mac build unchanged.
+
+`SpatialSolver` retains Accelerate on macOS and uses an allocation-free,
+double-precision radix-2 FFT elsewhere. `TideFourierCheck` checks that backend
+against an independent DFT, including DC and Nyquist, then checks roundtrips and
+solver convergence. It can write sample outputs for comparison with the native
+Accelerate backend. Windows CI also runs the 821, Worn tape, scene/UI and recording
+checks, verifies all bundled calibration hashes, and opens/closes the standalone.
+It does not validate an actual audio device or replace listening on a Windows PC.
+
 ## Checks
 
 Build the native checks, then use a fresh output directory for each run:

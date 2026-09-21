@@ -1,6 +1,7 @@
 # Tide Room — Windows x64 preview
 
-This is an experimental standalone build for Intel/AMD x64 Windows PCs. It uses
+This is an experimental standalone build for Intel/AMD x64 PCs on Windows 10 or
+11. It uses
 the same instruments, spatial audio, Worn tape, 821 models, presets and recorder
 as the Mac app. No external audio plugin is required.
 

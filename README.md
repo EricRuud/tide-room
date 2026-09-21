@@ -30,6 +30,19 @@ The app includes its runtime assets and native room processing; no external audi
 
 Start with headphones, 48 kHz and a 1024-sample buffer. Choose the output device in **Options** and press **Play**. See the [playing guide](native/ROOM-QUICKSTART.md) and [development guide](native/DEVELOPMENT.md) for controls, architecture and checks.
 
+### Windows x64 preview
+
+An experimental Windows build is available for Intel/AMD PCs. Open a successful
+[Windows x64 preview workflow run](https://github.com/EricRuud/tide-room/actions/workflows/windows.yml)
+and download the `Tide-Room-Windows-x64-preview` artifact (GitHub sign-in required).
+Extract its preview ZIP, keeping `Resources` beside `Tide Room.exe`.
+
+The audio engine, tape modes, presets and recorder are shared with the Mac app.
+Graphics currently use the CPU fallback at reduced resolution; the Metal camera
+prism effect is unavailable. Windows audio-device behavior and interactive frame
+rate still need testing on real hardware. See the [Windows guide](native/WINDOWS.md)
+for requirements, limitations and a reproducible PowerShell build.
+
 ## Inside the room
 
 Drag a tower left/right and nearer/farther across the floor plane. Each pitch occupies a fixed plate in its stack. Water surrounds the whole stack and responds to the other instruments. **Fullscreen immersive** puts the camera at the listener; **Esc** returns to the controls.

@@ -69,8 +69,13 @@ try {
         } finally { if (!$process.HasExited) { Stop-Process -Id $process.Id -Force } }
     }
     Copy-Item (Join-Path $repo "native/WINDOWS.md") (Join-Path $app "README.txt")
+    $sourceRevision = & git -C $repo rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Cannot identify the source revision" }
+    @("Tide Room source for this build:", "https://github.com/EricRuud/tide-room/tree/$sourceRevision",
+        "Source archive: https://github.com/EricRuud/tide-room/archive/$sourceRevision.zip") |
+        Set-Content (Join-Path $app "SOURCE.txt") -Encoding utf8
     $zip = Join-Path $build "Tide-Room-Windows-x64-preview.zip"
-    Compress-Archive -Path (Join-Path $app "Tide Room.exe"), (Join-Path $app "Resources"), (Join-Path $app "README.txt") -DestinationPath $zip -Force
+    Compress-Archive -Path (Join-Path $app "Tide Room.exe"), (Join-Path $app "Resources"), (Join-Path $app "README.txt"), (Join-Path $app "SOURCE.txt") -DestinationPath $zip -Force
     Get-FileHash $zip -Algorithm SHA256 | Format-List
     Write-Host "Built: $zip"
 } finally { Stop-Transcript | Out-Null }

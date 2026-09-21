@@ -17,6 +17,10 @@ juce::AudioBuffer<float> render(room::EightTwentyOneTape& model,const juce::Audi
 int main(int argc,char** argv){std::cout<<std::unitbuf;try{
  check(argc>=3,"Usage: Tide821Check resources output [--ui]");juce::ScopedNoDenormals noDenormals;
  const juce::File folder(argv[1]),out(argv[2]);out.createDirectory();const auto input=signal();
+ {const auto unicode=out.getNonexistentChildFile(juce::String::fromUTF8(u8"models — café 音"),"",false);
+  check(folder.copyDirectoryTo(unicode),"Copy Unicode resource fixture");room::EightTwentyOneTape model;model.prepare(48000,512,unicode);
+  check(model.ready(0)&&model.ready(1),"821 failed to load from a Unicode resource path");check(unicode.deleteRecursively(),"Remove Unicode resource fixture");
+  std::cout<<"PASS both calibrations load from Unicode paths\n";}
  for(int calibration=0;calibration<2;++calibration)for(int q=0;q<3;++q){room::EightTwentyOneTape model;model.setSettings({0,0,q,calibration});model.prepare(48000,512,folder);check(model.ready(),model.status().toRawUTF8());
   const auto start=std::chrono::steady_clock::now();const auto result=render(model,input,512);const double cpu=std::chrono::duration<double>(std::chrono::steady_clock::now()-start).count()/(input.getNumSamples()/48000.);
   p821lab::NativeConfiguration config;check(config.load(folder.getChildFile(calibration?"90030":"model").getFullPathName().toStdString()),"Config load");p821lab::NativeModel base(config.features,config.controls,config.kernel,config.audio,config.slow,config.acEnabled,config.ac);
